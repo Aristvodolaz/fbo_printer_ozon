@@ -3,20 +3,54 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3019;
+const PORT = process.env.PORT || 3022;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // Для раздачи статических файлов (HTML)
 
-// Главная страница - раздаем index.html
+// Проверка существования файлов
+const indexPath = path.resolve(__dirname, 'index.html');
+const originalHtmlPath = path.resolve(__dirname, 'сканер_озон —2.html');
+
+// Главная страница - раздаем index.html или оригинальный файл
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    let fileToSend = null;
+    
+    // Проверяем какой файл существует
+    if (fs.existsSync(indexPath)) {
+        fileToSend = indexPath;
+    } else if (fs.existsSync(originalHtmlPath)) {
+        fileToSend = originalHtmlPath;
+    } else {
+        return res.status(404).send(`
+            <h1>Файл не найден</h1>
+            <p>Ищем файлы:</p>
+            <ul>
+                <li>${indexPath}</li>
+                <li>${originalHtmlPath}</li>
+            </ul>
+            <p>Текущая директория: ${__dirname}</p>
+        `);
+    }
+    
+    try {
+        console.log('Отправка файла:', fileToSend);
+        res.sendFile(fileToSend);
+    } catch (error) {
+        console.error('Ошибка отправки файла:', error);
+        res.status(500).send(`Ошибка загрузки страницы: ${error.message}`);
+    }
 });
+
+// Раздача статических файлов (CSS, JS, изображения и т.д.)
+app.use(express.static(__dirname, {
+    index: false // Отключаем автоматический index.html, так как обрабатываем вручную
+}));
 
 // Инициализация БД при запуске
 db.initPool().then(() => {
@@ -108,8 +142,8 @@ function getLocalIP() {
     return 'localhost';
 }
 
-// Запуск сервера
-app.listen(PORT, '0.0.0.0', () => {
+// Запуск сервера с обработкой ошибок
+const server = app.listen(PORT, '0.0.0.0', () => {
     const serverIP = getLocalIP();
     
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
@@ -118,4 +152,24 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   - В сети: http://${serverIP}:${PORT}`);
     console.log(`📊 API доступен по адресу http://${serverIP}:${PORT}/api`);
     console.log(`\n💡 Проверка работы: http://${serverIP}:${PORT}/api/health`);
+});
+
+// Обработка ошибок при запуске сервера
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`\n❌ ОШИБКА: Порт ${PORT} уже занят!`);
+        if (PORT === 22) {
+            console.error(`\n⚠️  ВНИМАНИЕ: Порт 22 обычно используется для SSH!`);
+            console.error(`   Рекомендуется использовать другой порт: PORT=3022 npm start\n`);
+        }
+        console.error(`\n🔧 Решение:`);
+        console.error(`   1. Найдите процесс: sudo lsof -i :${PORT}`);
+        console.error(`   2. Остановите его: kill <PID>`);
+        console.error(`   3. Или остановите PM2: pm2 stop fbo-printer-ozon`);
+        console.error(`   4. Или используйте другой порт: PORT=3022 npm start\n`);
+        process.exit(1);
+    } else {
+        console.error('❌ Ошибка запуска сервера:', error);
+        process.exit(1);
+    }
 });
