@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const os = require('os');
 const db = require('./db');
 
 const app = express();
@@ -92,10 +93,29 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Функция для определения локального IP адреса
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const devName in interfaces) {
+        const iface = interfaces[devName];
+        for (let i = 0; i < iface.length; i++) {
+            const alias = iface[i];
+            if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                return alias.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
 // Запуск сервера
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер запущен на http://0.0.0.0:${PORT}`);
-    console.log(`🌐 Приложение доступно по адресу http://localhost:${PORT}`);
-    console.log(`📊 API доступен по адресу http://localhost:${PORT}/api`);
-    console.log(`\n💡 Для доступа с других компьютеров используйте: http://<IP_СЕРВЕРА>:${PORT}`);
+    const serverIP = getLocalIP();
+    
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`🌐 Приложение доступно:`);
+    console.log(`   - Локально: http://localhost:${PORT}`);
+    console.log(`   - В сети: http://${serverIP}:${PORT}`);
+    console.log(`📊 API доступен по адресу http://${serverIP}:${PORT}/api`);
+    console.log(`\n💡 Проверка работы: http://${serverIP}:${PORT}/api/health`);
 });
