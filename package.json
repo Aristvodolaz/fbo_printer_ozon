@@ -1,0 +1,22 @@
+{
+  "name": "ozon-label-printer",
+  "version": "1.0.0",
+  "description": "Система печати маркировок OZON FBO с отслеживанием прогресса в БД",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "create-table": "node -e \"require('./db.js').createTable()\""
+  },
+  "keywords": ["ozon", "label", "printer", "database"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mssql": "^9.1.1",
+    "cors": "^2.8.5"
+  }
+}

@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Печать маркировок OZON FBO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0052d4 0%, #4364f7 50%, #6fb1fc 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        header {
+            background: linear-gradient(135deg, #0052d4 0%, #4364f7 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            animation: move 20s linear infinite;
+        }
+
+        @keyframes move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .upload-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            border: 2px dashed #4364f7;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(67, 100, 247, 0.2);
+            border-color: #0052d4;
+        }
+
+        .upload-card.has-file {
+            border-style: solid;
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .upload-card.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .upload-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .upload-desc {
+            color: #64748b;
+            font-size: 0.95em;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, #4364f7 0%, #0052d4 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            box-shadow: 0 4px 6px rgba(67, 100, 247, 0.3);
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(67, 100, 247, 0.4);
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #059669;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .search-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 16px 24px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #4364f7;
+            box-shadow: 0 0 0 3px rgba(67, 100, 247, 0.1);
+        }
+
+        .search-input.warning {
+            border-color: #f59e0b;
+            background: #fffbeb;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+
+        .btn-search {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-search:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-search:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4364f7;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+        }
+
+        .status-indicator.active {
+            background: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+        }
+
+        .result-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            min-height: 300px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: slideUp 0.5s;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .label-preview {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .label-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .label-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #0ea5e9;
+        }
+
+        .info-card.warning {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-left: 4px solid #f59e0b;
+        }
+
+        .info-label {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #0c4a6e;
+            word-break: break-all;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #4364f7 0%, #0052d4 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(67, 100, 247, 0.3);
+        }
+
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(67, 100, 247, 0.4);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .history-section {
+            margin-top: 30px;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+        }
+
+        .history-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #f8fafc;
+        }
+
+        .history-item.duplicate {
+            background: #fffbeb;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .history-vps {
+            font-weight: 600;
+            color: #4364f7;
+        }
+
+        .history-time {
+            font-size: 0.85em;
+            color: #94a3b8;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            animation: slideInRight 0.3s;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.show {
+            display: flex;
+        }
+
+        .toast-icon {
+            font-size: 1.5em;
+        }
+
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast.warning .toast-icon { color: #f59e0b; }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4364f7, #10b981);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+            .search-container {
+                flex-direction: column;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #4364f7;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #64748b;
+            margin-top: 5px;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .modal-icon {
+            font-size: 2.5em;
+            color: #f59e0b;
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .modal-content {
+            color: #64748b;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .modal-content strong {
+            color: #f59e0b;
+            font-size: 1.2em;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 1em;
+        }
+
+        .btn-modal-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .btn-modal-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-modal-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-modal-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .duplicate-warning {
+            background: #fffbeb;
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .duplicate-warning.show {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        .duplicate-warning-icon {
+            font-size: 1.5em;
+            color: #f59e0b;
+        }
+
+        .duplicate-warning-text {
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        /* Скрытый iframe для печати */
+        #printFrame {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 0;
+            visibility: hidden;
+        }
+
+        /* Стили для списка нераспечатанных */
+        .unprinted-section {
+            margin-top: 30px;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            display: none;
+        }
+
+        .unprinted-section.show {
+            display: block;
+            animation: slideUp 0.5s;
+        }
+
+        .unprinted-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .unprinted-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .unprinted-count {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .unprinted-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            background: #f8fafc;
+        }
+
+        .unprinted-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #ef4444;
+            transition: all 0.2s;
+        }
+
+        .unprinted-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .unprinted-vps {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .unprinted-marking {
+            font-size: 0.85em;
+            color: #64748b;
+            font-family: monospace;
+        }
+
+        .btn-show-unprinted {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-show-unprinted:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-hide-unprinted {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-hide-unprinted:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-copy-unprinted {
+            background: linear-gradient(135deg, #4364f7 0%, #0052d4 100%);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-copy-unprinted:hover {
+            transform: translateY(-1px);
+        }
+
+        .unprinted-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* ==================== ОКНО ОТЧЕТА ПРИВЯЗКИ ==================== */
+        .binding-report-section {
+            margin-top: 30px;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            display: none;
+        }
+
+        .binding-report-section.show {
+            display: block;
+            animation: slideUp 0.5s;
+        }
+
+        .binding-report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .binding-report-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .binding-report-stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .binding-stat {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #0c4a6e;
+            border: 1px solid #bae6fd;
+        }
+
+        .binding-stat.printed {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            color: #166534;
+            border-color: #86efac;
+        }
+
+        .binding-stat.pending {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+
+        .binding-search-box {
+            margin-bottom: 20px;
+        }
+
+        .binding-search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .binding-search-input:focus {
+            border-color: #4364f7;
+            box-shadow: 0 0 0 3px rgba(67, 100, 247, 0.1);
+        }
+
+        .binding-table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .binding-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        .binding-table th {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .binding-table th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+
+        .binding-table th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+
+        .binding-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .binding-table tr:hover {
+            background: #f1f5f9;
+        }
+
+        .binding-table tr.printed {
+            background: #f0fdf4;
+        }
+
+        .binding-table tr.printed:hover {
+            background: #dcfce7;
+        }
+
+        .binding-table tr.not-found {
+            background: #fef2f2;
+            opacity: 0.7;
+        }
+
+        .binding-table tr.not-found:hover {
+            background: #fee2e2;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-badge.printed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge.not-found {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .vps-cell {
+            font-weight: 600;
+            color: #1e293b;
+            font-family: monospace;
+            font-size: 1.05em;
+        }
+
+        .marking-cell {
+            color: #64748b;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .page-cell {
+            color: #4364f7;
+            font-weight: 600;
+        }
+
+        .btn-print-from-report {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        .btn-print-from-report:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-print-from-report:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-show-report {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-show-report:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-hide-report {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-hide-report:hover {
+            background: #e2e8f0;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        .no-results-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖨️ Печать маркировок OZON FBO</h1>
+            <p class="subtitle">Автоматическая печать маркировок по номеру ВПС</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="upload-card" id="excelCard">
+                    <span class="upload-icon">📊</span>
+                    <div class="upload-title">Привязка Озон (Excel)</div>
+                    <div class="upload-desc">Загрузите файл с колонками: Маркировка (A) и ВПС (B)</div>
+                    <label class="btn-upload">
+                        <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" onchange="handleExcelUpload(event)">
+                        Выбрать файл Excel
+                    </label>
+                    <div class="file-info" id="excelInfo"></div>
+                    <div class="progress-bar" id="excelProgress">
+                        <div class="progress-fill" id="excelProgressFill"></div>
+                    </div>
+                </div>
+
+                <div class="upload-card" id="pdfCard">
+                    <span class="upload-icon">📄</span>
+                    <div class="upload-title">Маркировки (PDF)</div>
+                    <div class="upload-desc">Загрузите PDF-файл со всеми маркировками</div>
+                    <label class="btn-upload">
+                        <input type="file" id="pdfInput" accept=".pdf" onchange="handlePdfUpload(event)">
+                        Выбрать файл PDF
+                    </label>
+                    <div class="file-info" id="pdfInfo"></div>
+                    <div class="progress-bar" id="pdfProgress">
+                        <div class="progress-fill" id="pdfProgressFill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator" id="excelStatus"></div>
+                    <span>Excel загружен: <strong id="excelCount">0</strong> записей</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="pdfStatus"></div>
+                    <span>PDF загружен: <strong id="pdfCount">0</strong> страниц</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="systemStatus"></div>
+                    <span id="systemText">Система готова</span>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="statsGrid" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-value" id="printedCount">0</div>
+                    <div class="stat-label">Напечатано</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalLabels">0</div>
+                    <div class="stat-label">Всего маркировок</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="progressPercent">0%</div>
+                    <div class="stat-label">Прогресс</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="liveTimer">0:00</div>
+                    <div class="stat-label">Время работы</div>
+                </div>
+            </div>
+
+            <!-- Search Section -->
+            <div class="search-section">
+                <h2 style="margin-bottom: 20px; color: #1e293b;">🔍 Поиск маркировки по ВПС</h2>
+                
+                <!-- Duplicate Warning Banner -->
+                <div class="duplicate-warning" id="duplicateWarning">
+                    <span class="duplicate-warning-icon">⚠️</span>
+                    <span class="duplicate-warning-text">
+                        Этот ВПС уже печатался ранее! Проверьте, действительно ли нужна повторная печать.
+                    </span>
+                </div>
+
+                <div class="search-container">
+                    <input type="text" 
+                           class="search-input" 
+                           id="vpsInput" 
+                           placeholder="Введите номер ВПС (например: VPS-12345)..."
+                           onkeypress="handleKeyPress(event)"
+                           oninput="checkDuplicateInput(this.value)"
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false">
+                    <button class="btn-search" id="searchBtn" onclick="startSearch()" disabled>
+                        <span id="searchBtnText">🖨️ Найти и печатать</span>
+                    </button>
+                </div>
+                
+                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 0 8px 8px 0; margin-top: 15px;">
+                    <strong>💡 Подсказка:</strong> Введите номер ВПС и нажмите Enter или кнопку поиска. 
+                    Система автоматически найдет соответствующую маркировку в PDF, отправит её на печать и очистит поле ввода для следующего заказа.
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="result-section" id="resultSection">
+                <h3 style="margin-bottom: 20px; color: #1e293b;">✅ Найденная маркировка</h3>
+                
+                <div class="label-info">
+                    <div class="info-card">
+                        <div class="info-label">ВПС (введенный)</div>
+                        <div class="info-value" id="resultVps">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Маркировка</div>
+                        <div class="info-value" id="resultMarking">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Найдено на странице</div>
+                        <div class="info-value" id="resultPage">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Время поиска</div>
+                        <div class="info-value" id="resultTime">-</div>
+                    </div>
+                </div>
+
+                <div class="label-preview" id="labelPreview">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🖼️</div>
+                        <p>Предпросмотр маркировки</p>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-action btn-print" onclick="reprintLabel()">
+                        🖨️ Печать повторно
+                    </button>
+                    <button class="btn-action btn-download" onclick="downloadLabel()">
+                        💾 Скачать изображение
+                    </button>
+                    <button class="btn-action" style="background: #f3f4f6; color: #374151;" onclick="clearResult()">
+                        🔍 Следующий ВПС
+                    </button>
+                </div>
+            </div>
+
+            <!-- Unprinted Section -->
+            <div class="unprinted-section" id="unprintedSection">
+                <div class="unprinted-header">
+                    <div>
+                        <div class="unprinted-title">📋 Нераспечатанные ВПС</div>
+                        <div style="color: #64748b; font-size: 0.9em; margin-top: 5px;">
+                            Список ВПС, которые еще не были напечатаны
+                        </div>
+                    </div>
+                    <div class="unprinted-count" id="unprintedCount">0</div>
+                </div>
+                <div class="unprinted-actions" style="margin-bottom: 15px;">
+                    <button class="btn-hide-unprinted" onclick="hideUnprinted()">
+                        ❌ Скрыть список
+                    </button>
+                    <button class="btn-copy-unprinted" onclick="copyUnprintedToClipboard()">
+                        📋 Копировать список
+                    </button>
+                </div>
+                <div class="unprinted-list" id="unprintedList">
+                    <!-- Нераспечатанные ВПС будут здесь -->
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="history-section" id="historySection" style="display: none;">
+                <div class="history-title">
+                    <span>📋 История поисков</span>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-show-report" id="btnShowReport" onclick="showBindingReport()" style="display: none;">
+                            📊 Отчет привязки
+                        </button>
+                        <button class="btn-show-unprinted" id="btnShowUnprinted" onclick="showUnprinted()" style="display: none;">
+                            ❗ Нераспечатанные
+                        </button>
+                    </div>
+                </div>
+                <div class="history-list" id="historyList">
+                    <!-- History items will be added here -->
+                </div>
+            </div>
+
+            <!-- ==================== ОКНО ОТЧЕТА ПРИВЯЗКИ ==================== -->
+            <div class="binding-report-section" id="bindingReportSection">
+                <div class="binding-report-header">
+                    <div class="binding-report-title">
+                        📊 Отчет привязки
+                        <span style="font-size: 0.7em; font-weight: normal; color: #64748b;">(все ВПС из Excel)</span>
+                    </div>
+                    <div class="binding-report-stats">
+                        <div class="binding-stat">
+                            Всего: <span id="reportTotalCount">0</span>
+                        </div>
+                        <div class="binding-stat printed">
+                            ✅ Напечатано: <span id="reportPrintedCount">0</span>
+                        </div>
+                        <div class="binding-stat pending">
+                            ⏳ Ожидает: <span id="reportPendingCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-actions">
+                    <button class="btn-hide-report" onclick="hideBindingReport()">
+                        ❌ Скрыть отчет
+                    </button>
+                    <button class="btn-copy-unprinted" onclick="copyReportToClipboard()">
+                        📋 Копировать все
+                    </button>
+                    <button class="btn-copy-unprinted" onclick="copyPendingToClipboard()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        📋 Копировать ожидающие
+                    </button>
+                </div>
+
+                <div class="binding-search-box">
+                    <input type="text" 
+                           class="binding-search-input" 
+                           id="reportSearchInput" 
+                           placeholder="🔍 Поиск по ВПС или маркировке..."
+                           oninput="filterReport(this.value)">
+                </div>
+
+                <div class="binding-table-container">
+                    <table class="binding-table" id="bindingTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">№</th>
+                                <th style="width: 180px;">ВПС</th>
+                                <th>Маркировка</th>
+                                <th style="width: 100px;">Страница</th>
+                                <th style="width: 130px;">Статус</th>
+                                <th style="width: 100px;">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bindingTableBody">
+                            <!-- Данные будут здесь -->
+                        </tbody>
+                    </table>
+                    <div class="no-results" id="reportNoResults" style="display: none;">
+                        <div class="no-results-icon">🔍</div>
+                        <div>Ничего не найдено</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span id="toastMessage">Операция выполнена успешно</span>
+    </div>
+
+    <!-- Duplicate Confirmation Modal -->
+    <div class="modal-overlay" id="duplicateModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-icon">⚠️</span>
+                <span class="modal-title">Внимание! Повторная печать</span>
+            </div>
+            <div class="modal-content">
+                ВПС <strong id="duplicateVpsNumber">VPS-XXXXX</strong> уже был распечатан ранее в этой сессии.<br><br>
+                Вы уверены, что действительно необходима повторная печать этой маркировки?<br><br>
+                <small>Это может привести к дублированию этикеток на одном товаре.</small>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-modal-secondary" onclick="closeModalAndClear()">
+                    Отмена (не печатать)
+                </button>
+                <button class="btn-modal btn-modal-primary" onclick="confirmAndPrintDuplicate()">
+                    Да, печатать повторно
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрытый iframe для печати без предпросмотра -->
+    <iframe id="printFrame"></iframe>
+
+    <script>
+        // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
+        let mappingData = new Map(); // VPS -> {marking, originalVps, row}
+        let pdfPages = []; // Array of {pageNum, imageData, textContent}
+        let currentLabel = null; // Текущая маркировка для отображения/печати
+        let printedVps = new Set(); // Уже напечатанные ВПС (нормализованные)
+        let stats = {
+            printed: 0,
+            totalInExcel: 0,
+            firstPrintTime: null,
+            timerInterval: null
+        };
+
+        // Кэш для отчета привязки (чтобы не искать каждый раз)
+        let bindingReportCache = [];
+        
+        // Название текущего задания (для БД)
+        let currentTaskName = null;
+        
+        // URL API сервера (по умолчанию localhost:3000)
+        const API_BASE_URL = window.location.origin.includes('localhost') 
+            ? 'http://localhost:3000' 
+            : window.location.origin;
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+        
+        function focusInput() {
+            const input = document.getElementById('vpsInput');
+            input.focus();
+            input.select();
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+            
+            msg.textContent = message;
+            toast.className = 'toast show ' + type;
+            icon.textContent = type === 'success' ? '✓' : type === 'warning' ? '⚠️' : '✕';
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function normalizeVps(vps) {
+            return vps.toUpperCase().replace(/\s/g, '');
+        }
+
+        // ==================== РАБОТА С БД (API) ====================
+        
+        // Сохранение прогресса печати в БД
+        async function savePrintProgressToDB(vpsNumber, normalizedVps, marking) {
+            if (!currentTaskName) return; // Если задание не загружено, не сохраняем
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/progress/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        taskName: currentTaskName,
+                        vpsNumber: vpsNumber,
+                        normalizedVps: normalizedVps,
+                        marking: marking || null
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    console.log(`✅ Прогресс сохранен в БД: ${vpsNumber}`);
+                }
+            } catch (error) {
+                console.error('❌ Ошибка сохранения прогресса в БД:', error);
+                // Не показываем ошибку пользователю, чтобы не мешать работе
+            }
+        }
+        
+        // Загрузка прогресса печати из БД
+        async function loadPrintProgressFromDB(taskName) {
+            if (!taskName) return;
+            
+            try {
+                const encodedTaskName = encodeURIComponent(taskName);
+                const response = await fetch(`${API_BASE_URL}/api/progress/load/${encodedTaskName}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // Прогресс не найден - это нормально для нового задания
+                        console.log('ℹ️ Прогресс для задания не найден в БД (новое задание)');
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                if (result.success && result.printedVps) {
+                    // Восстанавливаем напечатанные ВПС
+                    result.printedVps.forEach(normalizedVps => {
+                        printedVps.add(normalizedVps);
+                    });
+                    
+                    stats.printed = result.printedCount || 0;
+                    updateStats();
+                    
+                    if (stats.printed > 0) {
+                        showToast(`Загружен прогресс: ${stats.printed} напечатано из БД`, 'success');
+                        startTimer();
+                    }
+                    
+                    console.log(`✅ Загружен прогресс из БД: ${result.printedCount} напечатано`);
+                }
+            } catch (error) {
+                console.error('❌ Ошибка загрузки прогресса из БД:', error);
+                // Не показываем ошибку, чтобы не мешать работе без БД
+            }
+        }
+        
+        // Проверка подключения к API
+        async function checkApiConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const result = await response.json();
+                return result.success === true;
+            } catch (error) {
+                console.warn('⚠️ API сервер недоступен, работа без сохранения в БД');
+                return false;
+            }
+        }
+
+        // ==================== ЗАГРУЗКА ФАЙЛОВ ====================
+
+        async function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const card = document.getElementById('excelCard');
+            const info = document.getElementById('excelInfo');
+            const progress = document.getElementById('excelProgress');
+            const progressFill = document.getElementById('excelProgressFill');
+            
+            card.classList.remove('error');
+            progress.classList.add('show');
+            
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                progressFill.style.width = '50%';
+                
+                mappingData.clear();
+                let count = 0;
+                
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (row && row.length >= 2) {
+                        const marking = String(row[0] || '').trim();
+                        const vps = String(row[1] || '').trim();
+                        
+                        if (marking && vps) {
+                            mappingData.set(normalizeVps(vps), {
+                                marking: marking,
+                                originalVps: vps,
+                                row: i + 1
+                            });
+                            count++;
+                        }
+                    }
+                }
+                
+                stats.totalInExcel = count;
+                progressFill.style.width = '100%';
+                
+                // Устанавливаем название задания (имя файла без расширения)
+                currentTaskName = file.name.replace(/\.[^/.]+$/, '');
+                
+                setTimeout(async () => {
+                    card.classList.add('has-file');
+                    info.innerHTML = `✅ <strong>${file.name}</strong><br>Загружено: ${count}`;
+                    info.classList.add('show');
+                    progress.classList.remove('show');
+                    
+                    document.getElementById('excelCount').textContent = count;
+                    document.getElementById('excelStatus').classList.add('active');
+                    
+                    // Загружаем прогресс из БД для этого задания
+                    await loadPrintProgressFromDB(currentTaskName);
+                    
+                    checkSystemReady();
+                    showToast(`Excel загружен: ${count} записей`);
+                }, 300);
+                
+            } catch (error) {
+                card.classList.add('error');
+                showToast('Ошибка чтения Excel: ' + error.message, 'error');
+                progress.classList.remove('show');
+            }
+        }
+
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const card = document.getElementById('pdfCard');
+            const info = document.getElementById('pdfInfo');
+            const progress = document.getElementById('pdfProgress');
+            const progressFill = document.getElementById('pdfProgressFill');
+            
+            card.classList.remove('error');
+            progress.classList.add('show');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                pdfPages = [];
+                const totalPages = pdf.numPages;
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const scale = 2.0;
+                    const viewport = page.getViewport({ scale });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    const textContent = await page.getTextContent();
+                    const text = textContent.items.map(item => item.str).join(' ');
+                    
+                    pdfPages.push({
+                        pageNum: i,
+                        imageData: canvas.toDataURL('image/png'),
+                        textContent: text.toUpperCase()
+                    });
+                    
+                    progressFill.style.width = `${(i / totalPages) * 100}%`;
+                }
+                
+                card.classList.add('has-file');
+                info.innerHTML = `✅ <strong>${file.name}</strong><br>Страниц: ${totalPages}`;
+                info.classList.add('show');
+                progress.classList.remove('show');
+                
+                document.getElementById('pdfCount').textContent = totalPages;
+                document.getElementById('pdfStatus').classList.add('active');
+                checkSystemReady();
+                showToast(`PDF загружен: ${totalPages} страниц`);
+                
+            } catch (error) {
+                card.classList.add('error');
+                showToast('Ошибка чтения PDF: ' + error.message, 'error');
+                progress.classList.remove('show');
+            }
+        }
+
+        function checkSystemReady() {
+            const ready = mappingData.size > 0 && pdfPages.length > 0;
+            document.getElementById('systemStatus').classList.toggle('active', ready);
+            document.getElementById('systemText').textContent = ready ? 'Готов к работе' : 'Ожидание файлов...';
+            document.getElementById('searchBtn').disabled = !ready;
+            
+            if (ready) {
+                document.getElementById('statsGrid').style.display = 'grid';
+                document.getElementById('historySection').style.display = 'block';
+                document.getElementById('btnShowReport').style.display = 'inline-block';
+                updateStats();
+                focusInput();
+            }
+        }
+
+        // ==================== СТАТИСТИКА ====================
+
+        function updateStats() {
+            document.getElementById('printedCount').textContent = stats.printed;
+            document.getElementById('totalLabels').textContent = stats.totalInExcel;
+            const percent = stats.totalInExcel > 0 ? Math.round((stats.printed / stats.totalInExcel) * 100) : 0;
+            document.getElementById('progressPercent').textContent = percent + '%';
+            
+            const unprinted = stats.totalInExcel - stats.printed;
+            const btn = document.getElementById('btnShowUnprinted');
+            if (unprinted > 0 && stats.printed > 0) {
+                btn.style.display = 'inline-block';
+                btn.textContent = `❗ Нераспечатанные (${unprinted})`;
+            } else {
+                btn.style.display = 'none';
+            }
+
+            // Обновляем статистику в отчете привязки если он открыт
+            updateReportStats();
+        }
+
+        function startTimer() {
+            if (stats.timerInterval) return;
+            if (!stats.firstPrintTime) stats.firstPrintTime = Date.now();
+            
+            stats.timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - stats.firstPrintTime) / 1000);
+                const m = Math.floor(elapsed / 60);
+                const s = elapsed % 60;
+                document.getElementById('liveTimer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // ==================== ПОИСК И ПЕЧАТЬ ====================
+
+        function checkDuplicateInput(value) {
+            const normalized = normalizeVps(value);
+            const warning = document.getElementById('duplicateWarning');
+            const input = document.getElementById('vpsInput');
+            
+            if (normalized && printedVps.has(normalized)) {
+                warning.classList.add('show');
+                input.classList.add('warning');
+            } else {
+                warning.classList.remove('show');
+                input.classList.remove('warning');
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                startSearch();
+            }
+        }
+
+        // ГЛАВНАЯ ФУНКЦИЯ ПОИСКА
+        async function startSearch() {
+            const input = document.getElementById('vpsInput');
+            const originalVps = input.value.trim();
+            const normalizedVps = normalizeVps(originalVps);
+            
+            if (!normalizedVps) {
+                showToast('Введите номер ВПС', 'error');
+                return;
+            }
+            
+            // Проверка на дубликат
+            if (printedVps.has(normalizedVps)) {
+                // Показываем модальное окно
+                document.getElementById('duplicateVpsNumber').textContent = originalVps;
+                
+                // Сохраняем данные для использования после подтверждения
+                window.tempVpsData = {
+                    original: originalVps,
+                    normalized: normalizedVps,
+                    isDuplicate: true
+                };
+                
+                document.getElementById('duplicateModal').classList.add('show');
+                return;
+            }
+            
+            // Обычный поиск
+            await doSearch(originalVps, normalizedVps, false);
+        }
+
+        // Функция для подтверждения повторной печати
+        async function confirmAndPrintDuplicate() {
+            document.getElementById('duplicateModal').classList.remove('show');
+            
+            if (window.tempVpsData) {
+                const { original, normalized, isDuplicate } = window.tempVpsData;
+                await doSearch(original, normalized, isDuplicate);
+                window.tempVpsData = null;
+            }
+        }
+
+        // Функция отмены
+        function closeModalAndClear() {
+            document.getElementById('duplicateModal').classList.remove('show');
+            window.tempVpsData = null;
+            
+            const input = document.getElementById('vpsInput');
+            input.value = '';
+            focusInput();
+            
+            document.getElementById('duplicateWarning').classList.remove('show');
+            input.classList.remove('warning');
+        }
+
+        // ОСНОВНАЯ ЛОГИКА ПОИСКА
+        async function doSearch(originalVps, normalizedVps, isDuplicate) {
+            const input = document.getElementById('vpsInput');
+            const btn = document.getElementById('searchBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Поиск...';
+            
+            const startTime = performance.now();
+            
+            try {
+                const mapping = mappingData.get(normalizedVps);
+                
+                if (!mapping) {
+                    showToast(`ВПС "${originalVps}" не найден в Excel`, 'error');
+                    cleanupAfterSearch(input, btn, originalText);
+                    return;
+                }
+                
+                // Ищем в PDF
+                const marking = mapping.marking.toUpperCase();
+                let page = pdfPages.find(p => p.textContent.includes(marking));
+                
+                if (!page && marking.length > 10) {
+                    page = pdfPages.find(p => p.textContent.includes(marking.substring(0, 10)));
+                }
+                
+                const searchTime = ((performance.now() - startTime) / 1000).toFixed(2);
+                
+                if (!page) {
+                    showToast('Маркировка не найдена в PDF', 'error');
+                    displayNotFound(mapping, searchTime);
+                    cleanupAfterSearch(input, btn, originalText);
+                    return;
+                }
+                
+                // Нашли - сохраняем и показываем
+                currentLabel = {
+                    vps: mapping.originalVps,
+                    marking: mapping.marking,
+                    pageNum: page.pageNum,
+                    imageData: page.imageData,
+                    searchTime: searchTime,
+                    normalizedVps: normalizedVps
+                };
+                
+                displayResult(currentLabel, isDuplicate);
+                
+                // Обновляем статистику только при первой печати
+                if (!isDuplicate && !printedVps.has(normalizedVps)) {
+                    stats.printed++;
+                    printedVps.add(normalizedVps);
+                    updateStats();
+                    if (stats.printed === 1) startTimer();
+                    
+                    // Сохраняем прогресс в БД
+                    savePrintProgressToDB(
+                        mapping.originalVps,
+                        normalizedVps,
+                        mapping.marking
+                    );
+                    
+                    // Обновляем отчет привязки если открыт
+                    refreshBindingReport();
+                }
+                
+                // Печатаем
+                setTimeout(() => {
+                    printLabel(currentLabel.imageData, currentLabel.vps);
+                    showToast(isDuplicate ? 'Отправлено на повторную печать' : 'Отправлено на печать');
+                }, 100);
+                
+                cleanupAfterSearch(input, btn, originalText);
+                
+            } catch (error) {
+                console.error(error);
+                showToast('Ошибка при поиске', 'error');
+                cleanupAfterSearch(input, btn, originalText);
+            }
+        }
+
+        function cleanupAfterSearch(input, btn, originalText) {
+            input.value = '';
+            focusInput();
+            document.getElementById('duplicateWarning').classList.remove('show');
+            input.classList.remove('warning');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+
+        function displayResult(label, isDuplicate) {
+            document.getElementById('resultVps').textContent = label.vps + (isDuplicate ? ' ⚠️ ПОВТОРНО' : '');
+            document.getElementById('resultMarking').textContent = label.marking;
+            document.getElementById('resultPage').textContent = 'Страница ' + label.pageNum;
+            document.getElementById('resultTime').textContent = label.searchTime + 'с';
+            
+            const preview = document.getElementById('labelPreview');
+            preview.innerHTML = `<img src="${label.imageData}" style="max-width: 100%; height: auto;">`;
+            
+            const vpsCard = document.querySelector('.info-card:first-child');
+            if (isDuplicate) {
+                vpsCard.classList.add('warning');
+            } else {
+                vpsCard.classList.remove('warning');
+            }
+            
+            document.getElementById('resultSection').classList.add('show');
+        }
+
+        function displayNotFound(mapping, searchTime) {
+            document.getElementById('resultVps').textContent = mapping.originalVps;
+            document.getElementById('resultMarking').textContent = mapping.marking;
+            document.getElementById('resultPage').textContent = 'Не найдено в PDF';
+            document.getElementById('resultTime').textContent = searchTime + 'с';
+            
+            document.querySelector('.info-card:first-child').classList.add('warning');
+            document.getElementById('labelPreview').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <p>Маркировка не найдена в PDF файле</p>
+                </div>
+            `;
+            
+            currentLabel = null;
+            document.getElementById('resultSection').classList.add('show');
+        }
+
+        // ==================== ПЕЧАТЬ ====================
+
+        function printLabel(imageData, vps) {
+            if (!imageData) {
+                showToast('Нет данных для печати', 'error');
+                return;
+            }
+            
+            const frame = document.getElementById('printFrame');
+            const doc = frame.contentWindow || frame.contentDocument;
+            
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Печать ${vps}</title>
+                    <style>
+                        @page { size: landscape; margin: 0; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        html, body { width: 100%; height: 100%; overflow: hidden; }
+                        body { display: flex; justify-content: center; align-items: center; background: white; }
+                        img { width: 100%; height: 100%; object-fit: contain; }
+                        @media print { img { width: 100%; height: 100%; object-fit: contain; } }
+                    </style>
+                </head>
+                <body>
+                    <img src="${imageData}" onload="setTimeout(function() { window.print(); }, 100);">
+                </body>
+                </html>
+            `;
+            
+            doc.document.open();
+            doc.document.write(html);
+            doc.document.close();
+        }
+
+        function reprintLabel() {
+            if (!currentLabel || !currentLabel.imageData) {
+                showToast('Нет данных для печати', 'error');
+                return;
+            }
+            printLabel(currentLabel.imageData, currentLabel.vps);
+            showToast('Отправлено на печать повторно');
+        }
+
+        function downloadLabel() {
+            if (!currentLabel || !currentLabel.imageData) {
+                showToast('Нет данных для скачивания', 'error');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = `marking_${currentLabel.vps}_${Date.now()}.png`;
+            link.href = currentLabel.imageData;
+            link.click();
+            showToast('Изображение скачано');
+        }
+
+        function clearResult() {
+            document.getElementById('resultSection').classList.remove('show');
+            document.getElementById('vpsInput').value = '';
+            focusInput();
+        }
+
+        // ==================== НЕРАСПЕЧАТАННЫЕ ====================
+
+        function showUnprinted() {
+            const list = document.getElementById('unprintedList');
+            const section = document.getElementById('unprintedSection');
+            const countEl = document.getElementById('unprintedCount');
+            
+            list.innerHTML = '';
+            let count = 0;
+            
+            for (const [norm, data] of mappingData) {
+                if (!printedVps.has(norm)) {
+                    const item = document.createElement('div');
+                    item.className = 'unprinted-item';
+                    item.innerHTML = `<div><div class="unprinted-vps">${data.originalVps}</div><div class="unprinted-marking">${data.marking}</div></div>`;
+                    list.appendChild(item);
+                    count++;
+                }
+            }
+            
+            if (count === 0) {
+                list.innerHTML = `<div style="text-align: center; padding: 40px; color: #10b981;"><div style="font-size: 3em; margin-bottom: 10px;">✅</div><div style="font-weight: 600;">Все ВПС распечатаны!</div></div>`;
+            }
+            
+            countEl.textContent = count;
+            section.classList.add('show');
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideUnprinted() {
+            document.getElementById('unprintedSection').classList.remove('show');
+            focusInput();
+        }
+
+        function copyUnprintedToClipboard() {
+            const list = [];
+            for (const [norm, data] of mappingData) {
+                if (!printedVps.has(norm)) list.push(data.originalVps);
+            }
+            
+            navigator.clipboard.writeText(list.join('\n')).then(() => {
+                showToast(`Скопировано ${list.length} ВПС`);
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = list.join('\n');
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast(`Скопировано ${list.length} ВПС`);
+            });
+        }
+
+        // ==================== ОТЧЕТ ПРИВЯЗКИ ====================
+
+        function showBindingReport() {
+            const section = document.getElementById('bindingReportSection');
+            section.classList.add('show');
+            section.scrollIntoView({ behavior: 'smooth' });
+            
+            // Строим отчет
+            buildBindingReport();
+        }
+
+        function hideBindingReport() {
+            document.getElementById('bindingReportSection').classList.remove('show');
+            focusInput();
+        }
+
+        function buildBindingReport() {
+            bindingReportCache = [];
+            let index = 1;
+            
+            // Собираем данные
+            for (const [normalizedVps, data] of mappingData) {
+                const marking = data.marking.toUpperCase();
+                
+                // Ищем страницу в PDF
+                let page = pdfPages.find(p => p.textContent.includes(marking));
+                if (!page && marking.length > 10) {
+                    page = pdfPages.find(p => p.textContent.includes(marking.substring(0, 10)));
+                }
+                
+                const isPrinted = printedVps.has(normalizedVps);
+                
+                bindingReportCache.push({
+                    index: index++,
+                    normalizedVps: normalizedVps,
+                    originalVps: data.originalVps,
+                    marking: data.marking,
+                    pageNum: page ? page.pageNum : null,
+                    imageData: page ? page.imageData : null,
+                    isPrinted: isPrinted,
+                    isFound: !!page
+                });
+            }
+            
+            renderBindingTable(bindingReportCache);
+            updateReportStats();
+        }
+
+        function renderBindingTable(data) {
+            const tbody = document.getElementById('bindingTableBody');
+            const noResults = document.getElementById('reportNoResults');
+            
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                noResults.style.display = 'block';
+                return;
+            }
+            
+            noResults.style.display = 'none';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Класс строки в зависимости от статуса
+                if (!item.isFound) {
+                    row.className = 'not-found';
+                } else if (item.isPrinted) {
+                    row.className = 'printed';
+                }
+                
+                // Статус бейдж
+                let statusBadge = '';
+                if (!item.isFound) {
+                    statusBadge = '<span class="status-badge not-found">❌ Не найдено</span>';
+                } else if (item.isPrinted) {
+                    statusBadge = '<span class="status-badge printed">✅ Напечатано</span>';
+                } else {
+                    statusBadge = '<span class="status-badge pending">⏳ Ожидает</span>';
+                }
+                
+                // Кнопка печати
+                let printBtn = '';
+                if (item.isFound) {
+                    const disabled = item.isPrinted ? 'disabled' : '';
+                    const text = item.isPrinted ? 'Напечатано' : 'Печать';
+                    printBtn = `<button class="btn-print-from-report" onclick="printFromReport('${item.normalizedVps}')" ${disabled}>${text}</button>`;
+                } else {
+                    printBtn = '<span style="color: #94a3b8;">—</span>';
+                }
+                
+                row.innerHTML = `
+                    <td>${item.index}</td>
+                    <td class="vps-cell">${item.originalVps}</td>
+                    <td class="marking-cell" title="${item.marking}">${item.marking}</td>
+                    <td class="page-cell">${item.pageNum ? item.pageNum : '—'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${printBtn}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateReportStats() {
+            const total = bindingReportCache.length;
+            const printed = bindingReportCache.filter(i => i.isPrinted).length;
+            const pending = bindingReportCache.filter(i => i.isFound && !i.isPrinted).length;
+            const notFound = bindingReportCache.filter(i => !i.isFound).length;
+            
+            document.getElementById('reportTotalCount').textContent = total;
+            document.getElementById('reportPrintedCount').textContent = printed;
+            document.getElementById('reportPendingCount').textContent = pending;
+        }
+
+        function filterReport(searchText) {
+            const normalizedSearch = searchText.toLowerCase().trim();
+            
+            if (!normalizedSearch) {
+                renderBindingTable(bindingReportCache);
+                return;
+            }
+            
+            const filtered = bindingReportCache.filter(item => {
+                return item.originalVps.toLowerCase().includes(normalizedSearch) ||
+                       item.marking.toLowerCase().includes(normalizedSearch);
+            });
+            
+            renderBindingTable(filtered);
+        }
+
+        function refreshBindingReport() {
+            // Обновляем статусы печати в кэше
+            bindingReportCache.forEach(item => {
+                item.isPrinted = printedVps.has(item.normalizedVps);
+            });
+            
+            // Перерисовываем текущий фильтр
+            const searchText = document.getElementById('reportSearchInput').value;
+            filterReport(searchText);
+            updateReportStats();
+        }
+
+        async function printFromReport(normalizedVps) {
+            const item = bindingReportCache.find(i => i.normalizedVps === normalizedVps);
+            if (!item || !item.imageData) {
+                showToast('Маркировка не найдена', 'error');
+                return;
+            }
+            
+            // Проверяем, не печатался ли уже
+            if (printedVps.has(normalizedVps)) {
+                if (!confirm(`ВПС ${item.originalVps} уже печатался. Повторить?`)) {
+                    return;
+                }
+            } else {
+                // Первичная печать - обновляем статистику
+                stats.printed++;
+                printedVps.add(normalizedVps);
+                updateStats();
+                if (stats.printed === 1) startTimer();
+                
+                // Сохраняем прогресс в БД
+                savePrintProgressToDB(
+                    item.originalVps,
+                    normalizedVps,
+                    item.marking
+                );
+            }
+            
+            // Печатаем
+            printLabel(item.imageData, item.originalVps);
+            showToast('Отправлено на печать');
+            
+            // Обновляем отчет
+            refreshBindingReport();
+        }
+
+        function copyReportToClipboard() {
+            const lines = bindingReportCache.map(item => {
+                const status = item.isPrinted ? 'Напечатано' : (item.isFound ? 'Ожидает' : 'Не найдено');
+                return `${item.originalVps}\t${item.marking}\t${item.pageNum || '—'}\t${status}`;
+            });
+            
+            const header = 'ВПС\tМаркировка\tСтраница\tСтатус\n';
+            const text = header + lines.join('\n');
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`Скопировано ${bindingReportCache.length} записей`);
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast(`Скопировано ${bindingReportCache.length} записей`);
+            });
+        }
+
+        function copyPendingToClipboard() {
+            const pending = bindingReportCache.filter(i => i.isFound && !i.isPrinted);
+            const text = pending.map(i => i.originalVps).join('\n');
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`Скопировано ${pending.length} ожидающих ВПС`);
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast(`Скопировано ${pending.length} ожидающих ВПС`);
+            });
+        }
+
+        // ==================== СТАРТ ====================
+        window.onload = async function() {
+            // Проверяем подключение к API при загрузке страницы
+            const apiAvailable = await checkApiConnection();
+            if (apiAvailable) {
+                console.log('✅ API сервер доступен, сохранение в БД активно');
+            } else {
+                console.warn('⚠️ API сервер недоступен, работа без сохранения в БД');
+            }
+            
+            if (mappingData.size > 0 && pdfPages.length > 0) {
+                focusInput();
+            }
+        };
+    </script>
+</body>
+</html>
